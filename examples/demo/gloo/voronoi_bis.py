@@ -6,7 +6,6 @@
 # -----------------------------------------------------------------------------
 """ Voronoi shadertoy example from  www.shadertoy.com/view/ldl3W8 """
 
-import numpy as np
 from vispy import app, gloo
 
 
@@ -21,15 +20,17 @@ void main (void)
 
 fragment = """
 // Created by inigo quilez - iq/2013
-// License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
+// License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported
+// License.
 
 
-// I've not seen anybody out there computing correct cell interior distances for Voronoi
-// patterns yet. That's why they cannot shade the cell interior correctly, and why you've
-// never seen cell boundaries rendered correctly.
+// I've not seen anybody out there computing correct cell interior distances
+// for Voronoi patterns yet. That's why they cannot shade the cell interior
+// correctly, and why you've never seen cell boundaries rendered correctly.
 
-// However, here's how you do mathematically correct distances (note the equidistant and non
-// degenerated grey isolines inside the cells) and hence edges (in yellow):
+// However, here's how you do mathematically correct distances (note the
+// equidistant and non degenerated grey isolines inside the cells) and hence
+// edges (in yellow):
 
 // http://www.iquilezles.org/www/articles/voronoilines/voronoilines.htm
 
@@ -40,7 +41,8 @@ uniform float scale;
 vec2 hash2( vec2 p )
 {
     // procedural white noise
-    return fract(sin(vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3))))*43758.5453);
+    return fract(sin(vec2(dot(p,vec2(127.1,311.7)),
+                          dot(p,vec2(269.5,183.3))))*43758.5453);
 }
 
 vec3 voronoi( in vec2 x )
@@ -79,7 +81,7 @@ vec3 voronoi( in vec2 x )
     for( int i=-2; i<=2; i++ )
     {
         vec2 g = mg + vec2(float(i),float(j));
-		vec2 o = hash2( n + g);
+        vec2 o = hash2( n + g);
         o = 0.5 + 0.5*sin( iGlobalTime + 6.2831*o );
         vec2 r = g + o - f;
         if( dot(mr-r,mr-r)>0.00001 )
@@ -130,23 +132,29 @@ void main( void )
 
 
 c = app.Canvas(size=(800, 800), close_keys='escape')
-    
+
+
 def on_timer(event):
     program["iGlobalTime"] = event.elapsed
     c.update()
+
+
 timer = app.Timer(1. / 60)
 timer.connect(on_timer)
 timer.start()
+
 
 @c.connect
 def on_draw(event):
     gloo.clear()
     program.draw('triangle_strip')
 
+
 @c.connect
 def on_resize(event):
     gloo.set_viewport(0, 0, *event.size)
     program["iResolution"] = event.size
+
 
 @c.connect
 def on_mouse_wheel(event):
@@ -155,8 +163,9 @@ def on_mouse_wheel(event):
     program["scale"] = min(max(1, scale + .01 * dy * scale), 100)
     c.update()
 
+
 program = gloo.Program(vertex, fragment, count=4)
-program['position'] = [(-1,-1), (-1,+1), (+1,-1), (+1,+1)]
+program['position'] = [(-1, -1), (-1, +1), (+1, -1), (+1, +1)]
 program["iGlobalTime"] = 0
 program["scale"] = 10
 
