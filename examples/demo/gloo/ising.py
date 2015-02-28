@@ -69,7 +69,7 @@ float spin(ivec2 ij) {
 vec4 compute(ivec2 ij) {
 
 
-
+/*
     int dx = 0;
     int dy = 0;
 
@@ -92,10 +92,10 @@ vec4 compute(ivec2 ij) {
 
     //if ((dE <= 0.) || (exp(-dE / kT) > rnd))
         cij = 1. - cij;
+*/
 
 
-
-    return vec4(cij, 0., 0., 1.);
+    return vec4(cij, cij, cij, 1.);
 
 
     //return vec4(fetch(ij), 1.);
