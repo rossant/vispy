@@ -78,7 +78,7 @@ class Canvas(app.Canvas):
 
         self.grid_size = self.size[1], self.size[0]
 
-        tex_shape = self.grid_size + (3,)
+        tex_shape = self.grid_size + (1,)
         data1 = np.random.randint(size=tex_shape,
                                   low=0, high=255).astype(np.uint8)
 
