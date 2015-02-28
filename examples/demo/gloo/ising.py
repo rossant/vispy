@@ -4,8 +4,8 @@ from vispy import app
 import numpy as np
 
 a_position = np.array([[-1.0, -1.0, 0.0],
-                       [+1.0, -1.0, 0.0],
                        [-1.0, +1.0, 0.0],
+                       [+1.0, -1.0, 0.0],
                        [+1.0, +1.0, 0.0, ]], np.float32)
 
 a_tex_coords = np.array([[0.0, 0.0],
@@ -36,17 +36,7 @@ void main()
 
 
 
-VERT_SHADER2 = """
-attribute vec3 a_position;
-attribute vec2 a_texcoord;
-varying vec2 v_texcoord;
-
-void main (void) {
-    v_texcoord = a_texcoord;
-    gl_Position = vec4(a_position, 1.0);
-}
-
-"""
+VERT_SHADER2 = VERT_SHADER1
 
 FRAG_SHADER2 = """
 uniform sampler2D u_texture;
@@ -62,12 +52,17 @@ ivec2 grid_pos() {
     return ivec2(floor(u_grid_size * v_texcoord.st));
 }
 
+vec3 compute(ivec2 ij) {
+    return .25 * (1 * fetch(ij + ivec2(-1, 0)) +
+                  2 * fetch(ij + ivec2( 0, 0)) +
+                  1 * fetch(ij + ivec2( 1, 0)));
+}
+
 void main()
 {
-    gl_FragColor = texture2D(u_texture, v_texcoord);
-    /*ivec2 ij = grid_pos();
-    vec3 color = fetch(ij);
-    gl_FragColor = vec4(color, 1.0);*/
+    ivec2 ij = grid_pos();
+    vec3 color = compute(ij);
+    gl_FragColor = vec4(color, 1.0);
 }
 
 """
@@ -100,6 +95,11 @@ class Canvas(app.Canvas):
         self._program2['a_texcoord'] = gloo.VertexBuffer(a_tex_coords)
         self._program2['u_texture'] = self._tex2
         self._program2['u_grid_size'] = self.grid_size
+
+        self._timer = app.Timer(.1, self.on_timer, start=True)
+
+    def on_timer(self, e):
+        self.update()
 
     def on_resize(self, event):
         width, height = event.size
