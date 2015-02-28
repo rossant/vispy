@@ -24,28 +24,21 @@ void main (void) {
 }
 """
 
+
 FRAG_SHADER1 = """
-uniform sampler2D u_texture;
-varying vec2 v_texcoord;
-
-void main()
-{
-    gl_FragColor = texture2D(u_texture, v_texcoord);
-}
-"""
-
-
-
-VERT_SHADER2 = VERT_SHADER1
-
-FRAG_SHADER2 = """
-uniform sampler2D u_texture;
+uniform sampler2D u_texture_1;
+uniform sampler2D u_texture_2;
 varying vec2 v_texcoord;
 uniform vec2 u_grid_size;
 
+uniform int u_swap;
+
 vec3 fetch(ivec2 ij) {
     vec2 uv = ij / u_grid_size;
-    return texture2D(u_texture, uv).rgb;
+    if (u_swap == 0)
+        return texture2D(u_texture_1, uv).rgb;
+    else
+        return texture2D(u_texture_2, uv).rgb;
 }
 
 ivec2 grid_pos() {
@@ -67,11 +60,23 @@ void main()
 
 """
 
+
+FRAG_SHADER2 = """
+uniform sampler2D u_texture;
+varying vec2 v_texcoord;
+
+void main()
+{
+    gl_FragColor = texture2D(u_texture, v_texcoord);
+}
+"""
+
 class Canvas(app.Canvas):
 
     def __init__(self):
         app.Canvas.__init__(self, keys='interactive')
         self.size = 1000, 1000
+        self._swap = 0
 
         self.grid_size = self.size[1], self.size[0]
 
@@ -82,23 +87,29 @@ class Canvas(app.Canvas):
         self._tex1 = gloo.Texture2D(data1)
         self._tex2 = gloo.Texture2D(tex_shape)
 
-        self._fbo = gloo.FrameBuffer(self._tex2,
-                                     gloo.RenderBuffer(self.grid_size))
+        self._fbo1 = gloo.FrameBuffer(self._tex1,
+                                      gloo.RenderBuffer(self.grid_size))
+        self._fbo2 = gloo.FrameBuffer(self._tex2,
+                                      gloo.RenderBuffer(self.grid_size))
 
         self._program1 = gloo.Program(VERT_SHADER1, FRAG_SHADER1)
         self._program1['a_position'] = gloo.VertexBuffer(a_position)
         self._program1['a_texcoord'] = gloo.VertexBuffer(a_tex_coords)
-        self._program1['u_texture'] = self._tex1
+        self._program1['u_texture_1'] = self._tex1
+        self._program1['u_texture_2'] = self._tex2
+        self._program1['u_swap'] = self._swap
+        self._program1['u_grid_size'] = self.grid_size
 
-        self._program2 = gloo.Program(VERT_SHADER2, FRAG_SHADER2)
+        self._program2 = gloo.Program(VERT_SHADER1, FRAG_SHADER2)
         self._program2['a_position'] = gloo.VertexBuffer(a_position)
         self._program2['a_texcoord'] = gloo.VertexBuffer(a_tex_coords)
         self._program2['u_texture'] = self._tex2
-        self._program2['u_grid_size'] = self.grid_size
 
         self._timer = app.Timer(.1, self.on_timer, start=True)
 
     def on_timer(self, e):
+        self._swap = (1 - self._swap)
+        self._program1['u_swap'] = self._swap
         self.update()
 
     def on_resize(self, event):
@@ -106,7 +117,8 @@ class Canvas(app.Canvas):
         gloo.set_viewport(0, 0, width, height)
 
     def on_draw(self, event):
-        with self._fbo:
+        fbo = self._fbo2 if self._swap == 0 else self._fbo1
+        with fbo:
             gloo.set_clear_color('red')
             gloo.clear(color=True, depth=True)
             gloo.set_viewport(0, 0, self.grid_size[1], self.grid_size[0])
