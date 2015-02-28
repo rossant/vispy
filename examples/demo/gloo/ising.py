@@ -45,15 +45,66 @@ ivec2 grid_pos() {
     return ivec2(round((u_grid_size + 1) * v_texcoord.st));
 }
 
-vec3 compute(ivec2 ij) {
-    return fetch(ij + ivec2(1, 0));
+float rand_seed(vec2 co){
+    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+}
+
+/*float rand() {
+    vec2 seed = vec2(0., 0.);
+    if (u_swap == 1)
+        seed = texture2D(u_texture_1, seed).rg;
+    else
+        seed = texture2D(u_texture_2, seed).rg;
+    return rand_seed(seed);
+}*/
+
+float spin(ivec2 ij) {
+    float cij = fetch(ij).r;
+    if (cij < .5)
+        return 0.;
+    else
+        return 1.;
+}
+
+vec4 compute(ivec2 ij) {
+
+
+
+    int dx = 0;
+    int dy = 0;
+
+    ivec2 ij2 = ivec2(round(u_grid_size)) - ij;
+    float rnd = rand_seed(vec2(0., spin(ij2)));
+
+    float cij = spin(ij);
+
+    float kT = 2. / log(1. + sqrt(2.));
+
+    float cnt = 0.;
+    for (dx = -1; dx <= 1; dx++) {
+        for (dy = -1; (dy <= 1); dy++) {
+            if ((dx == 0) && (dy == 0))
+                continue;
+            cnt += spin(ij + ivec2(dx, dy));
+        }
+    }
+    float dE = 2. * cij * cnt;
+
+    //if ((dE <= 0.) || (exp(-dE / kT) > rnd))
+        cij = 1. - cij;
+
+
+
+    return vec4(cij, 0., 0., 1.);
+
+
+    //return vec4(fetch(ij), 1.);
 }
 
 void main()
 {
     ivec2 ij = grid_pos();
-    vec3 color = compute(ij);
-    gl_FragColor = vec4(color, 1.0);
+    gl_FragColor = compute(ij);
 }
 
 """
@@ -78,9 +129,12 @@ class Canvas(app.Canvas):
 
         self.grid_size = self.size[1], self.size[0]
 
-        tex_shape = self.grid_size + (1,)
-        data1 = np.random.randint(size=tex_shape,
-                                  low=0, high=255).astype(np.uint8)
+        tex_shape = self.grid_size + (3,)
+
+        data1 = np.zeros(tex_shape)
+        data1[:,:,0] = (np.random.uniform(size=self.grid_size) < .5) * 1
+
+        data1 = (data1 * 255).astype(np.uint8)
 
         self._tex1 = gloo.Texture2D(data1)
         self._tex2 = gloo.Texture2D(tex_shape, wrapping='repeat')
@@ -103,7 +157,7 @@ class Canvas(app.Canvas):
         self._program2['a_texcoord'] = gloo.VertexBuffer(a_tex_coords)
         self._program2['u_texture'] = self._tex2
 
-        self._timer = app.Timer('auto', self.on_timer, start=True)
+        self._timer = app.Timer(1., self.on_timer, start=True)
 
     def on_timer(self, e):
         self._swap = (1 - self._swap)
@@ -117,7 +171,7 @@ class Canvas(app.Canvas):
     def on_draw(self, event):
         fbo = self._fbo2 if self._swap == 0 else self._fbo1
         with fbo:
-            gloo.set_clear_color('red')
+            gloo.set_clear_color('white')
             gloo.clear(color=True, depth=True)
             gloo.set_viewport(0, 0, self.grid_size[1], self.grid_size[0])
             self._program1.draw('triangle_strip')
