@@ -27,18 +27,18 @@ void main (void) {
 
 FRAG_SHADER1 = """
 uniform sampler2D u_texture_1;
-uniform sampler2D u_texture_2;
+//uniform sampler2D u_texture_2;
 varying vec2 v_texcoord;
 uniform vec2 u_grid_size;
 
-uniform int u_swap;
+//uniform int u_swap;
 
 vec3 fetch(ivec2 ij) {
     vec2 uv = ij / u_grid_size;
-    if (u_swap == 0)
+    //if (u_swap < .5)
         return texture2D(u_texture_1, uv).rgb;
-    else
-        return texture2D(u_texture_2, uv).rgb;
+    /*else
+        return texture2D(u_texture_2, uv).rgb;*/
 }
 
 ivec2 grid_pos() {
@@ -68,8 +68,6 @@ float spin(ivec2 ij) {
 
 vec4 compute(ivec2 ij) {
 
-
-/*
     int dx = 0;
     int dy = 0;
 
@@ -90,15 +88,13 @@ vec4 compute(ivec2 ij) {
     }
     float dE = 2. * cij * cnt;
 
-    //if ((dE <= 0.) || (exp(-dE / kT) > rnd))
+    if ((dE <= 0.) || (exp(-dE / kT) > rnd))
         cij = 1. - cij;
-*/
 
+    //cij = spin(ij + ivec2(0, 0));
+    //cij = 1 - cij;
 
     return vec4(cij, cij, cij, 1.);
-
-
-    //return vec4(fetch(ij), 1.);
 }
 
 void main()
@@ -127,7 +123,7 @@ class Canvas(app.Canvas):
         self.size = 1000, 1000
         self._swap = 0
 
-        self.grid_size = self.size[1], self.size[0]
+        self.grid_size = self.size[1] // 10, self.size[0] // 10
 
         tex_shape = self.grid_size + (3,)
 
@@ -148,8 +144,8 @@ class Canvas(app.Canvas):
         self._program1['a_position'] = gloo.VertexBuffer(a_position)
         self._program1['a_texcoord'] = gloo.VertexBuffer(a_tex_coords)
         self._program1['u_texture_1'] = self._tex1
-        self._program1['u_texture_2'] = self._tex2
-        self._program1['u_swap'] = self._swap
+        # self._program1['u_texture_2'] = self._tex2
+        # self._program1['u_swap'] = self._swap
         self._program1['u_grid_size'] = self.grid_size
 
         self._program2 = gloo.Program(VERT_SHADER1, FRAG_SHADER2)
@@ -157,11 +153,11 @@ class Canvas(app.Canvas):
         self._program2['a_texcoord'] = gloo.VertexBuffer(a_tex_coords)
         self._program2['u_texture'] = self._tex2
 
-        self._timer = app.Timer(1., self.on_timer, start=True)
+        self._timer = app.Timer(.1, self.on_timer, start=True)
 
     def on_timer(self, e):
         self._swap = (1 - self._swap)
-        self._program1['u_swap'] = self._swap
+        # self._program1['u_swap'] = self._swap
         self.update()
 
     def on_resize(self, event):
@@ -170,14 +166,20 @@ class Canvas(app.Canvas):
 
     def on_draw(self, event):
         fbo = self._fbo2 if self._swap == 0 else self._fbo1
+        tex = self._tex1 if self._swap == 0 else self._tex2
+        tex2 = self._tex2 if self._swap == 0 else self._tex1
+
         with fbo:
             gloo.set_clear_color('white')
             gloo.clear(color=True, depth=True)
             gloo.set_viewport(0, 0, self.grid_size[1], self.grid_size[0])
+            self._program1['u_texture_1'] = tex
             self._program1.draw('triangle_strip')
 
+        gloo.set_viewport(0, 0, 1000, 1000)
         gloo.set_clear_color('white')
         gloo.clear(color=True, depth=True)
+        self._program2['u_texture'] = tex2
         self._program2.draw('triangle_strip')
 
 if __name__ == '__main__':
