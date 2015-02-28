@@ -42,13 +42,11 @@ vec3 fetch(ivec2 ij) {
 }
 
 ivec2 grid_pos() {
-    return ivec2(floor(u_grid_size * v_texcoord.st));
+    return ivec2(round((u_grid_size + 1) * v_texcoord.st));
 }
 
 vec3 compute(ivec2 ij) {
-    return .25 * (1 * fetch(ij + ivec2(-1, 0)) +
-                  2 * fetch(ij + ivec2( 0, 0)) +
-                  1 * fetch(ij + ivec2( 1, 0)));
+    return fetch(ij + ivec2(1, 0));
 }
 
 void main()
@@ -85,7 +83,7 @@ class Canvas(app.Canvas):
                                   low=0, high=255).astype(np.uint8)
 
         self._tex1 = gloo.Texture2D(data1)
-        self._tex2 = gloo.Texture2D(tex_shape)
+        self._tex2 = gloo.Texture2D(tex_shape, wrapping='repeat')
 
         self._fbo1 = gloo.FrameBuffer(self._tex1,
                                       gloo.RenderBuffer(self.grid_size))
@@ -105,7 +103,7 @@ class Canvas(app.Canvas):
         self._program2['a_texcoord'] = gloo.VertexBuffer(a_tex_coords)
         self._program2['u_texture'] = self._tex2
 
-        self._timer = app.Timer(.1, self.on_timer, start=True)
+        self._timer = app.Timer('auto', self.on_timer, start=True)
 
     def on_timer(self, e):
         self._swap = (1 - self._swap)
