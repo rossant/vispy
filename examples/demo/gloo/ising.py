@@ -45,9 +45,9 @@ ivec2 grid_pos() {
     return ivec2(round((u_grid_size + 1) * v_texcoord.st));
 }
 
-float rand_seed(vec2 co){
+/*float rand_seed(vec2 co){
     return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
-}
+}*/
 
 /*float rand() {
     vec2 seed = vec2(0., 0.);
@@ -58,12 +58,18 @@ float rand_seed(vec2 co){
     return rand_seed(seed);
 }*/
 
+float rand() {
+    return texture2D(u_texture_1, gl_FragCoord.xy).r;
+}
+
 float spin(ivec2 ij) {
-    float cij = fetch(ij).r;
+    float cij = 2. * fetch(ij).r - 1.;
+    return cij;
+    /*
     if (cij < .5)
-        return 0.;
+        return -1.;
     else
-        return 1.;
+        return 1.;*/
 }
 
 vec4 compute(ivec2 ij) {
@@ -71,8 +77,9 @@ vec4 compute(ivec2 ij) {
     int dx = 0;
     int dy = 0;
 
-    ivec2 ij2 = ivec2(round(u_grid_size)) - ij;
-    float rnd = rand_seed(vec2(0., spin(ij2)));
+    //ivec2 ij2 = ivec2(round(u_grid_size)) - ij;
+    //float rnd = rand_seed(vec2(0., spin(ij2)));
+    float rnd = rand();
 
     float cij = spin(ij);
 
@@ -88,7 +95,7 @@ vec4 compute(ivec2 ij) {
     }
     float dE = 2. * cij * cnt;
 
-    return vec4(dE, 0., 0., 1.);
+    //return vec4(exp(-dE / kT), 0., 0., 1.);
 
     if ((dE <= 0.) || (exp(-dE / kT) > rnd))
         cij = 1. - cij;
