@@ -88,6 +88,8 @@ vec4 compute(ivec2 ij) {
     }
     float dE = 2. * cij * cnt;
 
+    return vec4(dE, 0., 0., 1.);
+
     if ((dE <= 0.) || (exp(-dE / kT) > rnd))
         cij = 1. - cij;
 
