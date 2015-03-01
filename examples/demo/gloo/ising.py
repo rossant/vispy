@@ -27,11 +27,15 @@ void main (void) {
 
 FRAG_SHADER1 = """
 uniform sampler2D u_texture_1;
-varying vec2 v_texcoord;
+// uniform sampler2D u_texture_rand;
+
 uniform vec2 u_grid_size;
+uniform float u_iter;
+
+varying vec2 v_texcoord;
 
 vec3 fetch(ivec2 ij) {
-    vec2 uv = ij / u_grid_size;
+    vec2 uv = vec2(ij) / u_grid_size;
     return texture2D(u_texture_1, uv).rgb;
 }
 
@@ -41,6 +45,12 @@ ivec2 grid_pos() {
 
 float rand_seed(vec2 co){
     return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+}
+
+float rand() {
+    //return texture2D(u_texture_rand, v_texcoord).r;
+    //return 1.;
+    return rand_seed(v_texcoord + 3. + u_iter);
 }
 
 float spin(ivec2 ij) {
@@ -53,13 +63,7 @@ vec4 compute(ivec2 ij) {
     int dx = 0;
     int dy = 0;
 
-    ivec2 ij2 = ivec2(round(u_grid_size)) - ij;
-    float rnd = rand_seed(vec2(0., spin(ij2)));
-
-    //float rnd = rand();
-
     float cij = spin(ij);
-
     float kT = 2. / log(1. + sqrt(2.));
 
     float cnt = 0.;
@@ -72,7 +76,7 @@ vec4 compute(ivec2 ij) {
     }
     float dE = 2. * cij * cnt;
 
-    if ((dE <= 0.) || (exp(-dE / kT) > rnd))
+    if ((dE <= 0.) || (exp(-dE / kT) > rand()))
         cij = 1. - cij;
 
     return vec4(cij, cij, cij, 1.);
@@ -97,6 +101,10 @@ void main()
 }
 """
 
+def rand(size):
+    return (np.random.uniform(size=size) * 255).astype(np.uint8)
+
+
 class Canvas(app.Canvas):
 
     def __init__(self):
@@ -106,15 +114,15 @@ class Canvas(app.Canvas):
 
         self.grid_size = self.size[1], self.size[0]
 
-        tex_shape = self.grid_size + (3,)
+        self._tex_shape = self.grid_size + (3,)
 
-        data1 = np.zeros(tex_shape)
+        data1 = np.zeros(self._tex_shape)
         data1[:,:,0] = (np.random.uniform(size=self.grid_size) < .5) * 1
 
         data1 = (data1 * 255).astype(np.uint8)
 
         self._tex1 = gloo.Texture2D(data1)
-        self._tex2 = gloo.Texture2D(tex_shape, wrapping='repeat')
+        self._tex2 = gloo.Texture2D(self._tex_shape,)# wrapping='repeat')
 
         self._fbo1 = gloo.FrameBuffer(self._tex1,
                                       gloo.RenderBuffer(self.grid_size))
@@ -125,7 +133,11 @@ class Canvas(app.Canvas):
         self._program1['a_position'] = gloo.VertexBuffer(a_position)
         self._program1['a_texcoord'] = gloo.VertexBuffer(a_tex_coords)
         self._program1['u_texture_1'] = self._tex1
+        # self._program1['u_texture_rand'] = rand(self._tex_shape)
         self._program1['u_grid_size'] = self.grid_size
+
+        self._iter = 0
+        self._program1['u_iter'] = 0.
 
         self._program2 = gloo.Program(VERT_SHADER1, FRAG_SHADER2)
         self._program2['a_position'] = gloo.VertexBuffer(a_position)
@@ -136,6 +148,9 @@ class Canvas(app.Canvas):
 
     def on_timer(self, e):
         self._swap = (1 - self._swap)
+        self._iter += 1
+        self._program1['u_iter'] = np.sin(self._iter)
+        # self._program1['u_texture_rand'] = rand(self._tex_shape)
         self.update()
 
     def on_resize(self, event):
