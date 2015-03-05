@@ -7,6 +7,7 @@ Vispy backend for the IPython notebook (WebGL approach).
 """
 
 from __future__ import division
+import os.path as op
 
 from ..base import (BaseApplicationBackend, BaseCanvasBackend,
                     BaseTimerBackend)
@@ -45,13 +46,16 @@ try:
     import tornado
     import IPython
     IPYTHON_MAJOR_VERSION = IPython.version_info[0]
-    if IPYTHON_MAJOR_VERSION < 2:
-        raise RuntimeError('ipynb_webgl backend requires IPython >= 2.0')
+    if IPYTHON_MAJOR_VERSION < 3:
+        raise RuntimeError('ipynb_webgl backend requires IPython >= 3.0')
     from IPython.html.widgets import DOMWidget
     from IPython.utils.traitlets import Unicode, Int
     from IPython.display import display
+    from IPython.html.nbextensions import (check_nbextension,
+                                           install_nbextension,
+                                           )
 except Exception as exp:
-    # raise ImportError("The WebGL backend requires IPython >= 2.0")
+    # raise ImportError("The WebGL backend requires IPython >= 3.0")
     available, testable, why_not, which = False, False, str(exp), None
 else:
     available, testable, why_not, which = True, False, None, None
@@ -59,14 +63,26 @@ else:
 
 # ------------------------------------------------------------- application ---
 
+def _install_js(path, overwrite=None):
+    if not check_nbextension(op.basename(path), user=True):
+        install_nbextension(path, user=True, overwrite=overwrite)
+
+
+def _prepare_js(overwrite=None):
+    pkgdir = op.dirname(__file__)
+    jsdir = op.join(pkgdir, '../../html/static/js/')
+    _install_js(op.join(jsdir, 'vispy.min.js'), overwrite=overwrite)
+    _install_js(op.join(jsdir, 'vispy-ipynb.js'), overwrite=overwrite)
+
 
 class ApplicationBackend(BaseApplicationBackend):
 
     def __init__(self):
         BaseApplicationBackend.__init__(self)
+        _prepare_js(overwrite=True)
 
     def _vispy_reuse(self):
-        pass
+        _prepare_js(overwrite=True)
 
     def _vispy_get_backend_name(self):
         return 'ipynb_webgl'
@@ -306,7 +322,7 @@ def _stop_timers(canvas):
 
 class VispyWidget(DOMWidget):
     _view_name = Unicode("VispyView", sync=True)
-    _view_module = Unicode('/nbextensions/vispy/webgl-backend.js', sync=True)
+    _view_module = Unicode('/nbextensions/vispy-ipynb.js', sync=True)
 
     width = Int(sync=True)
     height = Int(sync=True)
