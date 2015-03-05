@@ -351,10 +351,12 @@ class VispyWidget(DOMWidget):
         # Until IPython 3.0 is released, use base64.
         array_serialization = 'base64'
         # array_serialization = 'binary'
+
         if array_serialization == 'base64':
             msg = create_glir_message(commands, 'base64')
             msg['array_serialization'] = 'base64'
-            self.send(msg)
+            self.comm.send({"method": "custom", "content": msg})
+
         elif array_serialization == 'binary':
             msg = create_glir_message(commands, 'binary')
             msg['array_serialization'] = 'binary'

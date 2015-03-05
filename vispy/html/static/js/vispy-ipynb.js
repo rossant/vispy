@@ -108,7 +108,7 @@ define(function(require) {
                 for (var i = 0; i < commands_inlined.length; i++) {
                     var command = commands[i];
                     // Replace
-                    // console.debug(command);
+                    console.debug(command);
                     this.c.command(command);
                 }
             }
